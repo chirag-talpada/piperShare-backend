@@ -3,6 +3,7 @@ const multer=require('multer');
 const path=require('path');
 const fileModel=require("../models/file");
 const {v4:uuid}=require('uuid');
+const fs=require('fs');
 
 let storage=multer.diskStorage({
     destination:(req,file,cb)=>cb(null,'uploads/'),
@@ -17,7 +18,30 @@ let upload=multer({
     limits:{fileSize:1000000*100}
 }).single('myfile');
 
+async function fetchDate() {
+    const pastDate=new Date(Date.now()-24*60*60*1000);
+    const files=await fileModel.find({createdAt:{$lt:pastDate}});
+
+    if(files.length) {
+        for(const file of files) {
+           try {
+                const filePath=`${__dirname}/../${file.path}`;
+                fs.unlinkSync(filePath);
+                await file.remove();
+                console.log(`Successfully deleted ${file.filename}`);
+           } catch(err) {
+            console.log(`Error while deleting files ${err}`);
+           }
+        }
+    }
+}
+
+
 router.post('/',(req,res)=>{
+
+    //delete 24 hourse file
+    fetchDate().then(console.log('job done'));
+
 
     //store files
     upload(req,res,async(err)=>{
@@ -30,7 +54,7 @@ router.post('/',(req,res)=>{
         if(!req.file) {
             return res.json({error:'All fields are required.'});
         }
-
+     
         //store into database
         const file=new fileModel({
             filename:req.file.filename,

@@ -30,7 +30,5 @@ async function fetchDate() {
            }
         }
     }
-
     console.log('job done');
-
 }
